@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+
+    <!-- 读取db.properties -->
+    <context:property-placeholder location="classpath:db.properties"/>
+
+    <!-- datasource的配置 -->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="${jdbc.driver}"/>
+        <property name="jdbcUrl" value="${jdbc.url}"/>
+        <property name="user" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+    <!-- 事务管理器 -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- 基于注解的事务管理 -->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <!-- spring与mybatis-plus 整合 -->
+    <bean id="sqlSessionFactoryBean" class="com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="configLocation" value="classpath:mybatis.cfg.xml"/>
+        <!-- 别名处理 -->
+        <property name="typeAliasesPackage" value="cn.kgc.entity"/>
+        <!--插件注册-->
+        <property name="plugins">
+            <list>
+                <!--注册分页插件-->
+                <bean class="com.baomidou.mybatisplus.plugins.PaginationInterceptor"/>
+            </list>
+        </property>
+        <!--注入全局Mybatis-plus策略配置-->
+        <property name="globalConfig" ref="globalConfiguration"/>
+    </bean>
+
+    <!-- 配置 mybatis 扫描 mapper 接口的路径 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="cn.kgc.mapper"/>
+    </bean>
+
+    <!--定义Mybatis-plus的全局配置策略-->
+    <bean id="globalConfiguration" class="com.baomidou.mybatisplus.entity.GlobalConfiguration">
+        <!--在2.3版本以后, dbColumnUnderline默认值就是true列之间有下划线会自动采用驼峰-->
+        <property name="dbColumnUnderline" value="true"/>
+        <!--全局的主键策略-->
+        <!--取值:
+            AUTO(0, "数据库ID自增"),
+            INPUT(1, "用户输入ID"),
+            ID_WORKER(2, "全局唯一ID"),
+            UUID(3, "全局唯一ID"),
+            NONE(4, "该类型为未设置主键类型"),
+            ID_WORKER_STR(5, "字符串全局唯一ID");
+        -->
+        <property name="idType" value="1"/>
+        <!--全局的表前缀策略配置-->
+        <property name="tablePrefix" value="t_"/>
+
+        <!--配置自定义注入器-->
+        <property name="sqlInjector" ref="logicSqlInjector"/>
+
+        <!--注入逻辑删除全局值-->
+        <property name="logicDeleteValue" value="0"/>
+        <property name="logicNotDeleteValue" value="1"/>
+
+        <!--注入公共字段填充处理器-->
+        <property name="metaObjectHandler" ref="myHandler"/>
+    </bean>
+
+    <!--公共字段填充 处理器-->
+    <bean id="myHandler" class="cn.kgc.handler.MyHandler"/>
+
+    <!--注入逻辑删除配置-->
+    <bean id="logicSqlInjector" class="com.baomidou.mybatisplus.mapper.LogicSqlInjector"/>
+
+    <!--注入拓展-->
+    <bean id="mysqlInjection" class="cn.kgc.inject.StudentMapperInject"/>
+</beans>
+
